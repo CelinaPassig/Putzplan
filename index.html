@@ -1,0 +1,631 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Putzplan</title>
+<link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@300;400;500;600&family=DM+Mono:wght@400&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --bg:#f0eeeb;--surface:#fff;--surface-dim:#e8e5e1;
+    --text:#1a1917;--text-muted:#6b6762;--border:#d4d0cb;
+    --accent:#2d6a4f;--accent-muted:#74b59a;
+    --daily-accent:#3a5a8a;--twice-accent:#7a4a8a;
+    --done-text:#a8a5a0;--radius:10px;
+    --due:#c0392b;--soon:#d68910;--ok:#2d6a4f;
+    padding-top:env(safe-area-inset-top,0px);
+    padding-bottom:env(safe-area-inset-bottom,0px);
+  }
+  @media(prefers-color-scheme:dark){
+    :root{--bg:#1a1917;--surface:#242220;--surface-dim:#2e2c2a;--text:#f0eeeb;--text-muted:#9b9793;--border:#3a3835;--accent:#52a57d;--daily-accent:#5a87bb;--twice-accent:#a070b5;--done-text:#5a5754;--due:#e57373;--soon:#f0a030;--ok:#52a57d}
+  }
+  *{box-sizing:border-box;margin:0;padding:0}
+  html{font-family:'DM Sans',sans-serif;background:var(--bg);color:var(--text);font-size:15px}
+  body{max-width:640px;margin:0 auto;padding:24px 16px 60px}
+
+  /* Setup */
+  .setup-banner{background:#fff8e1;border:1px solid #f5c842;border-radius:var(--radius);padding:20px;margin-bottom:24px;display:none}
+  .setup-banner.visible{display:block}
+  .setup-banner h2{font-size:1rem;font-weight:600;margin-bottom:12px;color:#7a5a00}
+  .setup-steps{counter-reset:step;list-style:none}
+  .setup-steps li{counter-increment:step;display:flex;gap:10px;margin-bottom:10px;font-size:0.85rem;color:#5a4a00;line-height:1.5}
+  .setup-steps li::before{content:counter(step);background:#f5c842;color:#7a5a00;font-weight:700;width:20px;height:20px;min-width:20px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:0.75rem;margin-top:1px}
+  .setup-steps code{background:#fff3b0;padding:1px 5px;border-radius:3px;font-family:'DM Mono',monospace;font-size:0.8rem}
+  .url-input-row{display:flex;gap:8px;margin-top:14px}
+  .url-input{flex:1;padding:8px 12px;border:1px solid #d4c88a;border-radius:6px;font-family:'DM Mono',monospace;font-size:0.78rem;background:#fff;color:var(--text)}
+  .url-save-btn{padding:8px 16px;background:#2d6a4f;color:white;border:none;border-radius:6px;font-family:'DM Sans',sans-serif;font-size:0.85rem;cursor:pointer;white-space:nowrap}
+
+  /* Header */
+  header{margin-bottom:20px}
+  h1{font-size:1.5rem;font-weight:600;letter-spacing:-0.02em}
+  .meta-row{display:flex;align-items:center;justify-content:space-between;margin-top:4px}
+  .week-label{font-family:'DM Mono',monospace;font-size:0.8rem;color:var(--text-muted)}
+  .sync-dot{display:flex;align-items:center;gap:5px;font-size:0.72rem;color:var(--text-muted)}
+  .dot-indicator{width:7px;height:7px;border-radius:50%;background:var(--border);transition:background .3s}
+  .dot-indicator.online{background:#4caf80}.dot-indicator.syncing{background:#f0a030}.dot-indicator.offline{background:#e06060}
+
+  /* Tabs */
+  .tabs{display:flex;gap:4px;background:var(--surface-dim);border-radius:9px;padding:3px;margin-bottom:20px}
+  .tab-btn{flex:1;padding:8px;border:none;border-radius:7px;font-family:'DM Sans',sans-serif;font-size:0.875rem;font-weight:500;cursor:pointer;background:none;color:var(--text-muted);transition:all .15s}
+  .tab-btn.active{background:var(--surface);color:var(--text);box-shadow:0 1px 3px rgba(0,0,0,.08)}
+
+  /* Progress */
+  .progress-row{display:flex;align-items:center;gap:12px;background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);padding:12px 18px;margin-bottom:20px}
+  .progress-row .lbl{font-size:0.8rem;color:var(--text-muted);white-space:nowrap}
+  .bar-wrap{flex:1;background:var(--surface-dim);border-radius:4px;height:5px;overflow:hidden}
+  .bar-fill{height:100%;border-radius:4px;transition:width .3s}
+  .bar-fill.week{background:var(--accent)}
+  .bar-fill.recurring{background:var(--ok)}
+  .count{font-family:'DM Mono',monospace;font-size:0.8rem;color:var(--text-muted);white-space:nowrap}
+  .reset-btn{background:none;border:1px solid var(--border);color:var(--text-muted);font-family:'DM Sans',sans-serif;font-size:0.78rem;padding:4px 12px;border-radius:20px;cursor:pointer;white-space:nowrap}
+  .reset-btn:hover{border-color:var(--accent);color:var(--accent)}
+
+  /* Panels */
+  .tab-panel{display:none}.tab-panel.active{display:block}
+
+  /* Weekly sections */
+  .section{margin-bottom:20px}
+  .section-title{font-size:0.7rem;font-weight:600;letter-spacing:0.06em;text-transform:uppercase;padding:0 4px;margin-bottom:8px;display:flex;align-items:center;gap:8px}
+  .dot{width:8px;height:8px;border-radius:50%;display:inline-block}
+  .dot-daily{background:var(--daily-accent)}.dot-twice{background:var(--twice-accent)}.dot-weekly{background:var(--accent)}
+  .card{background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);overflow:hidden}
+
+  /* Single task */
+  .task{display:flex;align-items:center;gap:12px;padding:11px 16px;border-bottom:1px solid var(--surface-dim);cursor:pointer;transition:background .1s}
+  .task:last-child{border-bottom:none}
+  .task:hover{background:var(--surface-dim)}
+  .checkbox{width:18px;height:18px;min-width:18px;border:1.5px solid var(--border);border-radius:4px;display:flex;align-items:center;justify-content:center;transition:background .15s,border-color .15s;font-size:11px;color:white}
+  .task.checked .checkbox{background:var(--accent);border-color:var(--accent)}
+  .task-text{font-size:0.875rem;flex:1;line-height:1.35}
+  .task.checked .task-text{text-decoration:line-through;color:var(--done-text)}
+  .task-note{font-size:0.72rem;color:var(--text-muted);background:var(--surface-dim);padding:1px 7px;border-radius:10px;white-space:nowrap}
+
+  /* Multi checkbox */
+  .multi-task{padding:10px 16px;border-bottom:1px solid var(--surface-dim)}
+  .multi-task:last-child{border-bottom:none}
+  .multi-top{display:flex;align-items:center;gap:10px;margin-bottom:7px}
+  .multi-text{font-size:0.875rem;flex:1;line-height:1.35}
+  .multi-task.all-checked .multi-text{text-decoration:line-through;color:var(--done-text)}
+  .day-boxes{display:flex;gap:5px}
+  .day-box{display:flex;flex-direction:column;align-items:center;gap:3px;cursor:pointer}
+  .day-box-label{font-size:0.6rem;color:var(--text-muted);font-weight:500;line-height:1}
+  .day-box-check{width:22px;height:22px;border:1.5px solid var(--border);border-radius:4px;display:flex;align-items:center;justify-content:center;font-size:10px;color:white;transition:background .15s,border-color .15s}
+  .day-box-check.ticked{background:var(--daily-accent);border-color:var(--daily-accent)}
+  .twice-section .day-box-check.ticked{background:var(--twice-accent);border-color:var(--twice-accent)}
+
+  /* ── Recurring tasks ── */
+  .rec-section{margin-bottom:16px}
+  .rec-header{display:flex;align-items:center;gap:10px;padding:10px 16px;cursor:pointer;background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);user-select:none}
+  .rec-section.open .rec-header{border-radius:var(--radius) var(--radius) 0 0;border-bottom-color:var(--surface-dim)}
+  .rec-header-label{flex:1;font-size:0.875rem;font-weight:600}
+  .rec-due-badge{font-size:0.7rem;font-weight:600;padding:2px 8px;border-radius:20px;white-space:nowrap}
+  .rec-due-badge.has-due{background:#fde8e8;color:var(--due)}
+  .rec-due-badge.all-ok{background:#e8f5ee;color:var(--ok)}
+  @media(prefers-color-scheme:dark){
+    .rec-due-badge.has-due{background:#3a1a1a;color:#e57373}
+    .rec-due-badge.all-ok{background:#1a2e22;color:#52a57d}
+  }
+  .rec-chevron{color:var(--text-muted);font-size:0.7rem;transition:transform .2s}
+  .rec-section.open .rec-chevron{transform:rotate(180deg)}
+  .rec-tasks{display:none;background:var(--surface);border:1px solid var(--border);border-top:none;border-radius:0 0 var(--radius) var(--radius);overflow:hidden}
+  .rec-section.open .rec-tasks{display:block}
+
+  .rec-task{display:flex;align-items:center;gap:12px;padding:11px 16px;border-bottom:1px solid var(--surface-dim);cursor:pointer;transition:background .1s}
+  .rec-task:last-child{border-bottom:none}
+  .rec-task:hover{background:var(--surface-dim)}
+  .rec-task-text{font-size:0.875rem;flex:1;line-height:1.35}
+  .rec-task.done .rec-task-text{text-decoration:line-through;color:var(--done-text)}
+  .rec-task.done .checkbox{background:var(--accent);border-color:var(--accent)}
+
+  .status-badge{font-size:0.68rem;font-weight:600;padding:2px 7px;border-radius:20px;white-space:nowrap;flex-shrink:0}
+  .status-badge.overdue{background:#fde8e8;color:var(--due)}
+  .status-badge.soon{background:#fef3cd;color:var(--soon)}
+  .status-badge.upcoming{background:var(--surface-dim);color:var(--text-muted)}
+  .status-badge.done-badge{background:#e8f5ee;color:var(--ok)}
+  @media(prefers-color-scheme:dark){
+    .status-badge.overdue{background:#3a1a1a;color:#e57373}
+    .status-badge.soon{background:#3a2a10;color:#f0a030}
+    .status-badge.done-badge{background:#1a2e22;color:#52a57d}
+  }
+
+  /* Confirm */
+  .confirm-overlay{display:none;position:fixed;inset:0;background:rgba(0,0,0,.35);z-index:10;align-items:flex-end;justify-content:center}
+  .confirm-overlay.visible{display:flex}
+  .confirm-box{background:var(--surface);border-radius:16px 16px 0 0;padding:24px 24px 36px;width:100%;max-width:640px;text-align:center}
+  .confirm-box p{font-size:0.95rem;margin-bottom:20px;color:var(--text-muted)}
+  .confirm-box strong{display:block;font-size:1.05rem;color:var(--text);margin-bottom:6px}
+  .btn-row{display:flex;gap:10px}
+  .btn{flex:1;padding:12px;border:none;border-radius:8px;font-family:'DM Sans',sans-serif;font-size:0.9rem;font-weight:500;cursor:pointer}
+  .btn-cancel{background:var(--surface-dim);color:var(--text-muted)}
+  .btn-confirm{background:var(--accent);color:white}
+</style>
+</head>
+<body>
+
+<div class="setup-banner" id="setup-banner">
+  <h2>⚙️ Einmalige Einrichtung (ca. 10 Minuten)</h2>
+  <ol class="setup-steps">
+    <li>Öffne <a href="https://drive.google.com" target="_blank">Google Drive</a> → Neu → Google Tabelle. Tab unten umbenennen zu <code>Putzplan</code></li>
+    <li>Erweiterungen → Apps Script → alles löschen → Code aus <code>apps_script.js</code> einfügen → Speichern</li>
+    <li>Bereitstellen → Neue Bereitstellung → Web-App → Ausführen als: Ich → Zugriff: Jeder → Bereitstellen</li>
+    <li>Bei der Google-Warnung: Advanced → "Go to Putzplan (unsafe)" → Allow</li>
+    <li>Web-App-URL kopieren und hier einfügen:</li>
+  </ol>
+  <div class="url-input-row">
+    <input class="url-input" id="url-input" type="text" placeholder="https://script.google.com/macros/s/..."/>
+    <button class="url-save-btn" onclick="saveUrl()">Speichern</button>
+  </div>
+</div>
+
+<header>
+  <h1>Putzplan</h1>
+  <div class="meta-row">
+    <div class="week-label" id="week-label">KW —</div>
+    <div class="sync-dot">
+      <div class="dot-indicator" id="sync-dot"></div>
+      <span id="sync-label">—</span>
+    </div>
+  </div>
+</header>
+
+<div class="tabs">
+  <button class="tab-btn active" onclick="switchTab('week')">📋 Diese Woche</button>
+  <button class="tab-btn" onclick="switchTab('recurring')">🔁 Wiederkehrend</button>
+</div>
+
+<!-- WOCHENROUTINE -->
+<div class="tab-panel active" id="panel-week">
+  <div class="progress-row">
+    <span class="lbl">Diese Woche</span>
+    <div class="bar-wrap"><div class="bar-fill week" id="bar-week" style="width:0%"></div></div>
+    <span class="count" id="count-week">0 / 0</span>
+    <button class="reset-btn" onclick="showReset('week')">Neue Woche</button>
+  </div>
+  <div id="lists-week"></div>
+</div>
+
+<!-- WIEDERKEHREND -->
+<div class="tab-panel" id="panel-recurring">
+  <div class="progress-row">
+    <span class="lbl">Fällig</span>
+    <div class="bar-wrap"><div class="bar-fill recurring" id="bar-rec" style="width:0%"></div></div>
+    <span class="count" id="count-rec">—</span>
+    <button class="reset-btn" onclick="showReset('recurring')">Alles zurücksetzen</button>
+  </div>
+  <div id="lists-rec"></div>
+</div>
+
+<div class="confirm-overlay" id="overlay">
+  <div class="confirm-box">
+    <strong id="confirm-title"></strong>
+    <p id="confirm-text"></p>
+    <div class="btn-row">
+      <button class="btn btn-cancel" onclick="hideReset()">Abbrechen</button>
+      <button class="btn btn-confirm" onclick="confirmReset()">Zurücksetzen</button>
+    </div>
+  </div>
+</div>
+
+<script>
+// ═══════════════════════════════════════════════
+//  WOCHENROUTINE — hier Aufgaben bearbeiten
+// ═══════════════════════════════════════════════
+const WEEK_SECTIONS = [
+  {id:"daily",label:"Täglich",dotClass:"dot-daily",sectionClass:"daily-section",mode:"daily",tasks:[
+    {id:"d1",text:"Küche aufräumen & Arbeitsflächen abwischen"},
+    {id:"d2",text:"Spülmaschine ein- oder ausräumen"},
+    {id:"d3",text:"Bett machen"},
+    {id:"d4",text:"Müll checken"},
+    {id:"d5",text:"Fenster kurz lüften"},
+    {id:"d6",text:"Reset-Runde (Dinge zurück an ihren Platz)"},
+    {id:"d7",text:"Pflanzen checken"},
+  ]},
+  {id:"twice",label:"2× pro Woche",dotClass:"dot-twice",sectionClass:"twice-section",mode:"twice",tasks:[
+    {id:"t1",text:"Bio-Müll raus"},
+    {id:"t2",text:"Handtücher wechseln"},
+    {id:"t3",text:"Wäsche waschen",note:"oder gebündelt am WE"},
+  ]},
+  {id:"weekly",label:"1× pro Woche",dotClass:"dot-weekly",sectionClass:"weekly-section",mode:"single",tasks:[
+    {id:"w1",text:"Restmüll raus"},
+    {id:"w2a",text:"Küche A: Arbeitsflächen, Kochfeld & Spüle kurz",note:"~10 min"},
+    {id:"w2b",text:"Küche B: Herd, Spüle, Flächen, Schrankfronten gründlich",note:"~20–25 min"},
+    {id:"w3",text:"Bad A: WC, Waschbecken & Spiegel",note:"~10 min"},
+    {id:"w4",text:"Bad B: Dusche & Badewanne",note:"~20 min"},
+    {id:"w5",text:"Flur aufräumen"},
+    {id:"w6",text:"Staub wischen (alle Zimmer)"},
+    {id:"w7",text:"Zimmerpflanzen gießen (Büro)",note:"nach Bedarf"},
+    {id:"w8",text:"Zimmerpflanzen gießen (Wohnzimmer)",note:"nach Bedarf"},
+    {id:"w9",text:"Balkonpflanzen",note:"nach Bedarf"},
+    {id:"w10",text:"Schreibtische aufräumen & abwischen"},
+    {id:"w11",text:"Wäsche wegräumen"},
+  ]},
+];
+
+// ═══════════════════════════════════════════════
+//  WIEDERKEHRENDE AUFGABEN — hier bearbeiten
+//  Intervall in Tagen (30=monatlich, 60=2-monatl,
+//  90=vierteljährl, 180=halbjährl, 365=jährlich)
+// ═══════════════════════════════════════════════
+const RECURRING = [
+  {id:"monthly", label:"Monatlich", days:30, tasks:[
+    {id:"r_m1",  text:"Spülmaschine reinigen"},
+    {id:"r_m2",  text:"Waschmaschine reinigen"},
+    {id:"r_m3",  text:"Schwämme ersetzen"},
+    {id:"r_m4",  text:"Abflüsse reinigen"},
+    {id:"r_m5",  text:"Lüftungsschlitze + Türen/Lichtschalter abwischen"},
+    {id:"r_m6",  text:"Sofabezug waschen"},
+    {id:"r_m7",  text:"Diffusor mit Isopropanol reinigen"},
+    {id:"r_m8",  text:"Küchenschränke abwischen"},
+    {id:"r_m9",  text:"Rasierklingen / Pflegeprodukte wechseln"},
+    {id:"r_m10", text:"Trockner reinigen"},
+    {id:"r_m11", text:"Sukkulenten gießen"},
+  ]},
+  {id:"bimonthly", label:"Alle 2 Monate", days:60, tasks:[
+    {id:"r_b1", text:"Kühlschrank reinigen"},
+    {id:"r_b2", text:"Zahnbürste wechseln"},
+    {id:"r_b3", text:"Wasserkocher + Kaffeemaschine entkalken"},
+    {id:"r_b4", text:"Toaster reinigen"},
+    {id:"r_b5", text:"Glasrecycling"},
+    {id:"r_b6", text:"Schneidebrett ölen"},
+    {id:"r_b7", text:"Mülleimer reinigen"},
+    {id:"r_b8", text:"Mikrowelle + Ofen reinigen"},
+    {id:"r_b9", text:"Auto absaugen"},
+  ]},
+  {id:"quarterly", label:"Vierteljährlich", days:90, tasks:[
+    {id:"r_q1", text:"Duschkopf entkalken"},
+    {id:"r_q2", text:"Bad: Tiefenreinigung (Armaturen, Fugen, Abflüsse)"},
+    {id:"r_q3", text:"Küche: Tiefenreinigung (Backofen, Dunstabzug, Fugen, Spüle)"},
+    {id:"r_q4", text:"Balkon Tiefenreinigung"},
+    {id:"r_q5", text:"Badezimmer-Stauraum organisieren"},
+    {id:"r_q6", text:"Kleiderschrank aufräumen"},
+    {id:"r_q7", text:"Dachboden / Abstellraum aufräumen"},
+    {id:"r_q8", text:"Büro aufräumen + Schreibtische"},
+    {id:"r_q9", text:"Tack cleaning (Sattelzeug)"},
+    {id:"r_q10",text:"Reifendruck prüfen"},
+  ]},
+  {id:"semiannual", label:"Halbjährlich", days:180, tasks:[
+    {id:"r_s1", text:"Matratze drehen & reinigen"},
+    {id:"r_s2", text:"Decken & Kissen waschen"},
+    {id:"r_s3", text:"Messer schärfen"},
+    {id:"r_s4", text:"MHDs im Vorratsschrank checken"},
+    {id:"r_s5", text:"Fußleisten wischen"},
+  ]},
+  {id:"annual", label:"Jährlich", days:365, tasks:[
+    {id:"r_a1", text:"Heizung reinigen"},
+    {id:"r_a2", text:"Lampen abwischen"},
+    {id:"r_a3", text:"PC reinigen"},
+    {id:"r_a4", text:"Fenster (alle Räume)"},
+  ]},
+];
+
+// ═══════════════════════════════════════════════
+//  APP-LOGIK
+// ═══════════════════════════════════════════════
+const DAYS     = ["Mo","Di","Mi","Do","Fr","Sa","So"];
+const LS_URL   = "putzplan_script_url";
+const LS_WEEK  = "putzplan_week_state";
+const LS_REC   = "putzplan_rec_state";
+const POLL_MS  = 30000;
+
+let weekState = {};
+let recState  = {};  // {taskId: "YYYY-MM-DD"} — datum der letzten Erledigung
+let scriptUrl = localStorage.getItem(LS_URL) || "";
+let pollTimer = null;
+let pendingReset = null;
+
+// ── Setup ────────────────────────────────────
+function saveUrl() {
+  const v = document.getElementById("url-input").value.trim();
+  if (!v.startsWith("https://script.google.com")) { alert("Das sieht nicht wie eine Apps Script URL aus."); return; }
+  scriptUrl=v; localStorage.setItem(LS_URL,v);
+  document.getElementById("setup-banner").classList.remove("visible");
+  startPolling(); fetchAll();
+}
+function checkSetup() { if(!scriptUrl){document.getElementById("setup-banner").classList.add("visible");setSyncStatus("offline");} }
+
+// ── Tabs ─────────────────────────────────────
+function switchTab(tab) {
+  document.querySelectorAll(".tab-btn").forEach((b,i)=>b.classList.toggle("active",["week","recurring"][i]===tab));
+  document.querySelectorAll(".tab-panel").forEach(p=>p.classList.toggle("active",p.id==="panel-"+tab));
+}
+
+// ── Week label ───────────────────────────────
+function getWeekLabel() {
+  const now=new Date(), s=new Date(now);
+  s.setDate(now.getDate()-((now.getDay()+6)%7));
+  const e=new Date(s); e.setDate(s.getDate()+6);
+  const fmt=d=>d.toLocaleDateString("de-DE",{day:"numeric",month:"short"});
+  const jan1=new Date(now.getFullYear(),0,1);
+  const kw=Math.ceil(((now-jan1)/86400000+jan1.getDay()+1)/7);
+  return `KW ${kw} · ${fmt(s)} – ${fmt(e)}`;
+}
+
+// ── Sync status ──────────────────────────────
+function setSyncStatus(s) {
+  const dot=document.getElementById("sync-dot"),lbl=document.getElementById("sync-label");
+  if(s==="online"){dot.className="dot-indicator online";lbl.textContent="synchronisiert";}
+  else if(s==="syncing"){dot.className="dot-indicator syncing";lbl.textContent="speichern…";}
+  else{dot.className="dot-indicator offline";lbl.textContent="offline";}
+}
+
+// ── LocalStorage ─────────────────────────────
+function saveLocal(k,d){try{localStorage.setItem(k,JSON.stringify(d));}catch{}}
+function loadLocal(k){try{return JSON.parse(localStorage.getItem(k))||{};}catch{return{};}}
+
+// ── Due calculation ──────────────────────────
+function getDueStatus(taskId, intervalDays) {
+  const lastDone = recState[taskId];
+  if (!lastDone) return {status:"overdue", label:"noch nie"};
+  const last = new Date(lastDone);
+  const next = new Date(last); next.setDate(next.getDate()+intervalDays);
+  const today = new Date(); today.setHours(0,0,0,0);
+  const daysLeft = Math.ceil((next-today)/86400000);
+  if (daysLeft <= 0)  return {status:"overdue",  label:"fällig!"};
+  if (daysLeft <= 7)  return {status:"soon",      label:`in ${daysLeft} T.`};
+  if (daysLeft <= 30) return {status:"upcoming",  label:`in ${daysLeft} T.`};
+  return {status:"ok", label:`in ${daysLeft} T.`};
+}
+
+function isDue(taskId, intervalDays) {
+  const s = getDueStatus(taskId, intervalDays);
+  return s.status === "overdue" || s.status === "soon";
+}
+
+// ── Progress (recurring) ─────────────────────
+function updateRecProgress() {
+  let total=0, due=0;
+  RECURRING.forEach(sec=>sec.tasks.forEach(t=>{
+    total++;
+    const s=getDueStatus(t.id,sec.days);
+    if(s.status==="overdue")due++;
+  }));
+  const doneCount = total - due;
+  const pct = total ? doneCount/total*100 : 100;
+  document.getElementById("bar-rec").style.width=pct+"%";
+  document.getElementById("count-rec").textContent= due===0 ? "alles erledigt ✓" : `${due} fällig`;
+}
+
+// ── API ──────────────────────────────────────
+async function fetchAll() {
+  if(!scriptUrl){weekState=loadLocal(LS_WEEK);recState=loadLocal(LS_REC);syncWeekUI();syncRecUI();return;}
+  try{
+    const r=await fetch(scriptUrl+"?action=getAll");
+    const d=await r.json();
+    if(d.success){
+      weekState=d.week||{};recState=d.quarter||{};
+      saveLocal(LS_WEEK,weekState);saveLocal(LS_REC,recState);
+      syncWeekUI();syncRecUI();setSyncStatus("online");
+    }
+  }catch(e){weekState=loadLocal(LS_WEEK);recState=loadLocal(LS_REC);syncWeekUI();syncRecUI();setSyncStatus("offline");}
+}
+
+async function writeWeekKey(key,val){
+  weekState[key]=val;saveLocal(LS_WEEK,weekState);
+  if(!scriptUrl)return;
+  setSyncStatus("syncing");
+  try{await fetch(scriptUrl,{method:"POST",body:JSON.stringify({action:"toggle",section:"week",id:key,value:val})});setSyncStatus("online");}
+  catch(e){setSyncStatus("offline");}
+}
+
+async function writeRecTask(taskId, done) {
+  if(done) recState[taskId] = new Date().toISOString().slice(0,10);
+  else delete recState[taskId];
+  saveLocal(LS_REC,recState);
+  if(!scriptUrl)return;
+  setSyncStatus("syncing");
+  try{
+    await fetch(scriptUrl,{method:"POST",body:JSON.stringify({action:"toggle",section:"quarter",id:taskId,value:recState[taskId]||false})});
+    setSyncStatus("online");
+  }catch(e){setSyncStatus("offline");}
+}
+
+async function doResetSection(section){
+  if(section==="week"){weekState={};saveLocal(LS_WEEK,{});}
+  else{recState={};saveLocal(LS_REC,{});}
+  if(scriptUrl){
+    setSyncStatus("syncing");
+    try{await fetch(scriptUrl,{method:"POST",body:JSON.stringify({action:"reset",section:section==="week"?"week":"quarter"})});setSyncStatus("online");}
+    catch(e){setSyncStatus("offline");}
+  }
+  if(section==="week")syncWeekUI(); else syncRecUI();
+}
+
+// ── Week progress ────────────────────────────
+function updateWeekProgress(){
+  let total=0,done=0;
+  WEEK_SECTIONS.forEach(s=>{
+    const n=s.mode==="daily"?7:s.mode==="twice"?2:1;
+    s.tasks.forEach(t=>{
+      if(s.mode==="single"){total++;if(weekState[t.id])done++;}
+      else{for(let i=0;i<n;i++){total++;if(weekState[t.id+"_"+i])done++;}}
+    });
+  });
+  const pct=total?done/total*100:0;
+  document.getElementById("bar-week").style.width=pct+"%";
+  document.getElementById("count-week").textContent=done+" / "+total;
+}
+
+// ── Sync week UI ─────────────────────────────
+function syncWeekUI(){
+  WEEK_SECTIONS.forEach(sec=>{
+    const n=sec.mode==="daily"?7:sec.mode==="twice"?2:1;
+    sec.tasks.forEach(t=>{
+      if(sec.mode==="single"){
+        const el=document.getElementById("task-"+t.id);if(!el)return;
+        el.classList.toggle("checked",!!weekState[t.id]);
+        el.querySelector(".checkbox").textContent=weekState[t.id]?"✓":"";
+      }else{
+        let all=true;
+        for(let i=0;i<n;i++){
+          const b=document.getElementById("box-"+t.id+"-"+i);if(!b)continue;
+          b.classList.toggle("ticked",!!weekState[t.id+"_"+i]);
+          b.textContent=weekState[t.id+"_"+i]?"✓":"";
+          if(!weekState[t.id+"_"+i])all=false;
+        }
+        const row=document.getElementById("mtask-"+t.id);
+        if(row)row.classList.toggle("all-checked",all&&n>0);
+      }
+    });
+  });
+  updateWeekProgress();
+}
+
+// ── Sync recurring UI ────────────────────────
+function syncRecUI(){
+  RECURRING.forEach(sec=>{
+    let dueCount=0;
+    sec.tasks.forEach(t=>{
+      const {status,label}=getDueStatus(t.id,sec.days);
+      const el=document.getElementById("rtask-"+t.id);
+      const badge=document.getElementById("rbadge-"+t.id);
+      if(!el)return;
+      const isDone = status==="ok"||status==="upcoming";
+      el.classList.toggle("done",isDone);
+      el.querySelector(".checkbox").textContent=isDone?"✓":"";
+      if(badge){
+        badge.className="status-badge "+
+          (status==="overdue"?"overdue":status==="soon"?"soon":status==="upcoming"?"upcoming":"done-badge");
+        badge.textContent=isDone&&recState[t.id]?label:"fällig!";
+        if(status==="overdue"||status==="soon")badge.textContent=status==="overdue"&&!recState[t.id]?"noch nie":label;
+        if(isDone)badge.textContent=label;
+      }
+      if(status==="overdue")dueCount++;
+    });
+    // Section header badge
+    const hbadge=document.getElementById("rhbadge-"+sec.id);
+    if(hbadge){
+      if(dueCount>0){hbadge.className="rec-due-badge has-due";hbadge.textContent=dueCount+" fällig";}
+      else{hbadge.className="rec-due-badge all-ok";hbadge.textContent="✓ alles erledigt";}
+    }
+  });
+  updateRecProgress();
+}
+
+// ── Week toggles ─────────────────────────────
+async function toggleWeekSingle(id){
+  weekState[id]=!weekState[id];
+  const el=document.getElementById("task-"+id);
+  if(el){el.classList.toggle("checked",weekState[id]);el.querySelector(".checkbox").textContent=weekState[id]?"✓":"";}
+  updateWeekProgress();await writeWeekKey(id,weekState[id]);
+}
+async function toggleWeekBox(taskId,idx,secId){
+  const key=taskId+"_"+idx;weekState[key]=!weekState[key];
+  const b=document.getElementById("box-"+taskId+"-"+idx);
+  if(b){b.classList.toggle("ticked",weekState[key]);b.textContent=weekState[key]?"✓":"";}
+  const sec=WEEK_SECTIONS.find(s=>s.id===secId);
+  const n=sec&&sec.mode==="daily"?7:2;
+  const all=Array.from({length:n},(_,i)=>weekState[taskId+"_"+i]).every(Boolean);
+  const row=document.getElementById("mtask-"+taskId);if(row)row.classList.toggle("all-checked",all);
+  updateWeekProgress();await writeWeekKey(key,weekState[key]);
+}
+
+// ── Recurring toggle ─────────────────────────
+async function toggleRec(taskId, intervalDays) {
+  const {status}=getDueStatus(taskId,intervalDays);
+  const isDone=status==="ok"||status==="upcoming";
+  await writeRecTask(taskId,isDone?false:true);
+  syncRecUI();
+}
+
+// ── Confirm ──────────────────────────────────
+function showReset(section){
+  pendingReset=section;
+  if(section==="week"){
+    document.getElementById("confirm-title").textContent="Neue Woche starten?";
+    document.getElementById("confirm-text").textContent="Alle wöchentlichen Häkchen werden zurückgesetzt.";
+  }else{
+    document.getElementById("confirm-title").textContent="Alle Daten zurücksetzen?";
+    document.getElementById("confirm-text").textContent="Alle Erledigungsdaten werden gelöscht — Aufgaben gelten wieder als nie erledigt.";
+  }
+  document.getElementById("overlay").classList.add("visible");
+}
+function hideReset(){document.getElementById("overlay").classList.remove("visible");}
+async function confirmReset(){hideReset();await doResetSection(pendingReset);}
+
+// ── Render week tab ──────────────────────────
+function renderWeek(){
+  const c=document.getElementById("lists-week");c.innerHTML="";
+  WEEK_SECTIONS.forEach(sec=>{
+    const section=document.createElement("div");
+    section.className="section "+sec.sectionClass;
+    section.innerHTML=`<div class="section-title"><span class="dot ${sec.dotClass}"></span>${sec.label}</div>`;
+    const card=document.createElement("div");card.className="card";
+    sec.tasks.forEach(t=>{
+      if(sec.mode==="single"){
+        const div=document.createElement("div");
+        div.className="task"+(weekState[t.id]?" checked":"");div.id="task-"+t.id;
+        div.onclick=()=>toggleWeekSingle(t.id);
+        div.innerHTML=`<div class="checkbox">${weekState[t.id]?"✓":""}</div><span class="task-text">${t.text}</span>${t.note?`<span class="task-note">${t.note}</span>`:""}`;
+        card.appendChild(div);
+      }else{
+        const n=sec.mode==="daily"?7:2,labels=sec.mode==="daily"?DAYS:["1×","2×"];
+        const all=n>0&&Array.from({length:n},(_,i)=>weekState[t.id+"_"+i]).every(Boolean);
+        const div=document.createElement("div");
+        div.className="multi-task"+(all?" all-checked":"");div.id="mtask-"+t.id;
+        const top=document.createElement("div");top.className="multi-top";
+        top.innerHTML=`<span class="multi-text">${t.text}</span>${t.note?`<span class="task-note">${t.note}</span>`:""}`;
+        div.appendChild(top);
+        const boxes=document.createElement("div");boxes.className="day-boxes";
+        for(let i=0;i<n;i++){
+          const ticked=!!weekState[t.id+"_"+i];
+          const box=document.createElement("div");box.className="day-box";
+          box.innerHTML=`<div class="day-box-label">${labels[i]}</div><div class="day-box-check${ticked?" ticked":""}" id="box-${t.id}-${i}">${ticked?"✓":""}</div>`;
+          const idx=i;box.onclick=()=>toggleWeekBox(t.id,idx,sec.id);
+          boxes.appendChild(box);
+        }
+        div.appendChild(boxes);card.appendChild(div);
+      }
+    });
+    section.appendChild(card);c.appendChild(section);
+  });
+  updateWeekProgress();
+}
+
+// ── Render recurring tab ─────────────────────
+function renderRecurring(){
+  const c=document.getElementById("lists-rec");c.innerHTML="";
+  RECURRING.forEach(sec=>{
+    const dueCount=sec.tasks.filter(t=>getDueStatus(t.id,sec.days).status==="overdue").length;
+    const section=document.createElement("div");
+    section.className="rec-section"+(dueCount>0?" open":"");
+    const header=document.createElement("div");header.className="rec-header";
+    header.onclick=()=>section.classList.toggle("open");
+    header.innerHTML=`
+      <span class="rec-header-label">${sec.label}</span>
+      <span class="rec-due-badge ${dueCount>0?"has-due":"all-ok"}" id="rhbadge-${sec.id}">
+        ${dueCount>0?dueCount+" fällig":"✓ alles erledigt"}
+      </span>
+      <span class="rec-chevron">▼</span>
+    `;
+    const tasks=document.createElement("div");tasks.className="rec-tasks";
+    sec.tasks.forEach(t=>{
+      const {status,label}=getDueStatus(t.id,sec.days);
+      const isDone=status==="ok"||status==="upcoming";
+      const div=document.createElement("div");
+      div.className="rec-task"+(isDone?" done":"");div.id="rtask-"+t.id;
+      div.onclick=()=>toggleRec(t.id,sec.days);
+      const badgeClass=status==="overdue"?"overdue":status==="soon"?"soon":status==="upcoming"?"upcoming":"done-badge";
+      const badgeText=isDone?label:(status==="overdue"&&!recState[t.id]?"noch nie":label);
+      div.innerHTML=`
+        <div class="checkbox">${isDone?"✓":""}</div>
+        <span class="rec-task-text">${t.text}</span>
+        <span class="status-badge ${badgeClass}" id="rbadge-${t.id}">${badgeText}</span>
+      `;
+      tasks.appendChild(div);
+    });
+    section.appendChild(header);section.appendChild(tasks);
+    c.appendChild(section);
+  });
+  updateRecProgress();
+}
+
+// ── Polling + Init ───────────────────────────
+function startPolling(){if(pollTimer)clearInterval(pollTimer);if(scriptUrl)pollTimer=setInterval(fetchAll,POLL_MS);}
+
+document.getElementById("week-label").textContent=getWeekLabel();
+weekState=loadLocal(LS_WEEK);recState=loadLocal(LS_REC);
+renderWeek();renderRecurring();
+checkSetup();startPolling();fetchAll();
+</script>
+</body>
+</html>
