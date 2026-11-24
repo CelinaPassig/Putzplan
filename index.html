@@ -217,13 +217,13 @@ const WEEK_SECTIONS = [
     {id:"d3",text:"Bett machen"},
     {id:"d4",text:"Müll checken"},
     {id:"d5",text:"Lüften"},
-    {id:"d6",text:"Reset-Runde (Dinge zurück an ihren Platz)"},
+    {id:"d6",text:"Reset-Runde",note:"Dinge zurück an ihren Platz"},
     {id:"d7",text:"Pflanzen checken"},
   ]},
   {id:"twice",label:"2× pro Woche",dotClass:"dot-twice",sectionClass:"twice-section",mode:"twice",tasks:[
     {id:"t1",text:"Bio-Müll raus"},
     {id:"t2",text:"Handtücher wechseln"},
-    {id:"t3",text:"Wäsche waschen",note:"oder gebündelt am WE"},
+    {id:"t3",text:"30°C Wäsche",note:"wenn nötig"},
   ]},
   {id:"weekly",label:"1× pro Woche",dotClass:"dot-weekly",sectionClass:"weekly-section",mode:"single",tasks:[
     {id:"w1a",text:"Restmüll raus"},
@@ -238,8 +238,9 @@ const WEEK_SECTIONS = [
     {id:"w7",text:"Zimmerpflanzen gießen (Büro)",note:"nach Bedarf"},
     {id:"w8",text:"Zimmerpflanzen gießen (Wohnzimmer)",note:"nach Bedarf"},
     {id:"w9",text:"Balkonpflanzen",note:"nach Bedarf"},
-    {id:"w10",text:"Schreibtische aufräumen & abwischen"},
+    {id:"w10",text:"60° Wäsche"},
     {id:"w11",text:"Wäsche wegräumen"},
+    {id:"w12",text:"Dreckwasser Robby"},
   ]},
 ];
 
@@ -249,6 +250,11 @@ const WEEK_SECTIONS = [
 //  90=vierteljährl, 180=halbjährl, 365=jährlich)
 // ═══════════════════════════════════════════════
 const RECURRING = [
+  {id:"biweekly", label:"Alle 2 Wochen", days:14, tasks:[
+  {id:"r_bw1", text:"Bettwäsche wechseln"},
+  {id:"r_bw2", text:"Wasser für Ableger"},
+  {id:"r_bw3", text:"Auto aussaugen und waschen"},
+]},
   {id:"monthly", label:"Monatlich", days:30, tasks:[
     {id:"r_m1",  text:"Spülmaschine reinigen"},
     {id:"r_m2",  text:"Waschmaschine reinigen"},
@@ -257,23 +263,24 @@ const RECURRING = [
     {id:"r_m5",  text:"Lüftungsfilter saugen"},
     {id:"r_m6",  text:"Sofabezug waschen"},
     {id:"r_m7",  text:"Diffusor mit Isopropanol reinigen"},
-    {id:"r_m8",  text:"Küchenschränke abwischen"},
-    {id:"r_m9",  text:"Rasierklingen / Pflegeprodukte wechseln"},
+    {id:"r_m8",  text:"Staub wedeln"},
+    {id:"r_m9",  text:"Rasierklingen wechseln"},
     {id:"r_m10", text:"Trockner reinigen"},
     {id:"r_m11", text:"Sukkulenten gießen"},
     {id:"r_m12",  text:"Türen/Lichtschalter abwischen"},
-    {id:"r_m13",  text:"Robby reinigen"},
   ]},
   {id:"bimonthly", label:"Alle 2 Monate", days:60, tasks:[
     {id:"r_b1", text:"Kühlschrank wischen"},
     {id:"r_b2", text:"Zahnbürste wechseln"},
-    {id:"r_b3", text:"Wasserkocher + Kaffeemaschine entkalken"},
+    {id:"r_b3", text:"Wasserkocher + Kaffeemaschine reinigen"},
+    {id:"r_b10", text:"Kaffeemühle"},
     {id:"r_b4", text:"Toaster reinigen"},
     {id:"r_b5", text:"Glasrecycling"},
     {id:"r_b6", text:"Schneidebrett ölen"},
     {id:"r_b7", text:"Mülleimer reinigen"},
     {id:"r_b8", text:"Mikrowelle + Ofen reinigen"},
     {id:"r_b9", text:"Auto aussaugen und waschen"},
+    {id:"r_b11",  text:"Robby reinigen"},
   ]},
   {id:"quarterly", label:"Vierteljährlich", days:90, tasks:[
     {id:"r_q1", text:"Duschkopf entkalken"},
@@ -286,6 +293,8 @@ const RECURRING = [
     {id:"r_q8", text:"Büro aufräumen + Schreibtisch"},
     {id:"r_q9", text:"Sattelzeug"},
     {id:"r_q10",text:"Reifendruck prüfen"},
+    {id:"r_q11",text:"Eingangstür abwischen"},
+    {id:"r_q12",text:"Lichtschalter abwischen"},
   ]},
   {id:"semiannual", label:"Halbjährlich", days:180, tasks:[
     {id:"r_s1", text:"Matratze drehen & reinigen"},
@@ -293,6 +302,8 @@ const RECURRING = [
     {id:"r_s3", text:"Messer schärfen"},
     {id:"r_s4", text:"MHDs im Vorratsschrank checken"},
     {id:"r_s5", text:"Fußleisten wischen"},
+    {id:"r_s5", text:"Regenjacken waschen und imprägnieren"},
+    {id:"r_s5", text:"Schuhe putzen und imprägnieren"},
   ]},
   {id:"annual", label:"Jährlich", days:365, tasks:[
     {id:"r_a1", text:"Heizung reinigen"},
